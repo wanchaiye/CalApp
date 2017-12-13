@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CalcApp</title>
+</head>
+<style>
+    label {
+        display:block; 
+    }
+    #wrap{
+        width:180px;
+        padding-left:20px;
+    }
+    .row{
+    	width:inherit;
+        padding-bottom:10px;
+        float:left;
+    }
+    .col1{
+    	width:30px;
+        float:left;
+    }
+    .floatRight{
+        float:right;
+    }
+    .clicked_operation{
+        background:red;
+        color:white;
+    }
+</style>
+<script type="text/javascript">
+    // ----------------------------- Manage File ----------------------------- 
+    var bucketName = 'wanchai';
+    var fileName = 'data.json';
+    // Save File
+    function SaveFile(dataJson){
+        var fs = require('fs');
+        fs.writeFile("data.json", JSON.stringify(dataJson), function(err) {
+            if(err) {
+                return alert(err);
+            }
+            alert("The file was saved!");
+        }); 
+    }
+    // Load File
+    function LoadFile(){
+        var fs = require('fs');
+        fs.readFile("data.json", 'utf8', function(err,respond) {
+            if(err) {
+                return alert("No File");
+            }
+            var data = JSON.parse(respond);
+            document.getElementById('txt_result').value = data.result;
+            var elements = document.getElementsByClassName("btn_operation");
+            for(var i = 0; i < elements.length; i ++){
+                if(elements[i].value == data.operation){
+                    elements[i].classList.add("clicked_operation");
+                }
+            }
+            document.getElementById('txt_a').value = data.a;
+            document.getElementById('txt_b').value = data.b;
+        }); 
+        
+
+    }
+    // Clould
+    function LoadFileFromCloud(){
+        const Storage = require('@google-cloud/storage');
+  
+        // Creates a client
+        const storage = new Storage();
+    
+        /**
+         * TODO(developer): Uncomment the following lines before running the sample.
+         */
+        // const bucketName = 'Name of a bucket, e.g. my-bucket';
+        // const srcFilename = 'Remote file to download, e.g. file.txt';
+        // const destFilename = 'Local destination for file, e.g. ./local/path/to/file.txt';
+    
+        const options = {
+        // The path to which the file should be downloaded, e.g. "./file.txt"
+        destination: fileName,
+        };
+    
+        // Downloads the file
+        storage
+        .bucket(bucketName)
+        .file(fileName)
+        .download(options)
+        .then(() => {
+            LoadFile();
+        })
+        .catch(err => {
+            console.error('ERROR:', err);
+            alert("Cannot find file");
+        });
+    }
+    function SaveFileToCloud(dataJson){
+        var fs = require('fs');
+        fs.writeFile("data.json", JSON.stringify(dataJson), function(err) {
+            if(err) {
+                return alert(err);
+            }
+            // [START storage_upload_file]
+            // Imports the Google Cloud client library
+            const Storage = require('@google-cloud/storage');
+        
+            // Creates a client
+            const storage = new Storage();
+        
+            /**
+             * TODO(developer): Uncomment the following lines before running the sample.
+             */
+            // const bucketName = 'Name of a bucket, e.g. my-bucket';
+            // const filename = 'Local file to upload, e.g. ./local/path/to/file.txt';
+        
+            // Uploads a local file to the bucket
+            storage
+            .bucket(bucketName)
+            .upload(fileName)
+            .then(() => {
+                storage
+                .bucket(bucketName)
+                .file(fileName)
+                .makePublic()
+                .then(() => {
+                    alert("The file was saved!");
+                    console.log('gs://${bucketName}/${filename} is now public.');
+                })
+                .catch(err => {
+                    alert(error);
+                    console.error('ERROR:', err);
+                });
+                console.log('${filename} uploaded to ${bucketName}.');
+            })
+            .catch(err => {
+                alert(error);
+                console.error('ERROR:', err);
+            });
+            // [END storage_upload_file]
+        }); 
+        
+    }
+
+    // -----------------------------  Onclick----------------------------- 
+    // Onclick from Operation 
+    function onclick_operation(obj){
+        var txt_a = document.getElementById('txt_a').value;
+        var txt_b = document.getElementById('txt_b').value;
+        // check value not null
+        if(txt_a == '' || txt_a == null || txt_b == '' || txt_b == null){
+            alert('Please Input A, B');
+            return false;
+        }
+        // check class exist
+        if(!obj.classList.contains('clicked_operation')){
+        	var elements = document.getElementsByClassName("clicked_operation");
+            if(elements.length > 0) elements[0].classList.remove("clicked_operation");
+            obj.classList.add('clicked_operation');            
+        }
+        // calculate
+        var result = 0;
+        var num_a = parseInt(txt_a);
+        var num_b = parseInt(txt_b);
+        switch(obj.value){
+            case '+' : result = num_a + num_b;
+            break;
+            case '-' : result = num_a - num_b;
+            break;
+            case 'X' : result = num_a * num_b;
+            break;
+            case '/' : result = num_a / num_b;
+            break;
+            case 'Pow' : result = Math.pow(num_a, num_b);
+            break;
+            defalut : result = 0;
+            break;
+        }
+		document.getElementById('txt_result').value = result % 1 != 0 ? result.toFixed(2).toString() : result.toString();
+    }
+
+    // Onclick Load
+    function onclick_load(){
+        if(document.getElementById("chk_cloud").checked){
+            LoadFileFromCloud();
+        }else{
+            LoadFile();
+        }
+        
+    }
+    // Onclick Save
+    function onclick_save(){
+        // validate data
+        var txt_result = document.getElementById('txt_result').value;
+        if(txt_result == null || txt_result == ''){
+            alert('No data to save');
+            return false;
+        }
+        var txt_operation = document.getElementsByClassName("clicked_operation")[0].value;
+        var txt_a = document.getElementById('txt_a').value;
+        var txt_b = document.getElementById('txt_b').value;
+        var storageData = {
+            a : txt_a,
+            b : txt_b,
+            operation : txt_operation,
+            result : txt_result
+        }
+        if(document.getElementById("chk_cloud").checked){
+            SaveFileToCloud(storageData);
+        }else{
+            SaveFile(storageData);
+        }
+        
+    }
+    
+    // ----------------------------- Utility ----------------------------- 
+    // Valid text input number
+    function isNumber(evt) {
+        evt = (evt) ? evt : window.event;
+        var charCode = (evt.which) ? evt.which : evt.keyCode;
+        if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+            return false;
+        }
+        return true;
+    }
+</script>
+<body onload="aa()">
+    <div id="wrap">
+        <div class="row"><span class="col1">A </span><input type="text" size="2" id="txt_a" onkeypress="return isNumber(event)"  /></div>
+        <div class="row"><span class="col1">B </span><input type="text" size="2" id="txt_b" onkeypress="return isNumber(event)"  /></div>
+        <div class="row">
+            <span class="col1">&nbsp;</span>
+            <input type="button" value="+" class="btn_operation" onclick="onclick_operation(this)" id="btn_plus" />
+            <input type="button" value="-" class="btn_operation" onclick="onclick_operation(this)" id="btn_minus" />
+            <input type="button" value="X" class="btn_operation" onclick="onclick_operation(this)" id="btn_multi" />
+            <input type="button" value="/" class="btn_operation" onclick="onclick_operation(this)" id="btn_divide" />
+            <input type="button" value="Pow" class="btn_operation" onclick="onclick_operation(this)" id="btn_pow" />
+        </div>
+        <div class="row">Result <input type="text" size="12" class="floatRight" id="txt_result" readonly /></div>
+        <div class="row">
+            <label class="floatRight"><input type="checkbox" id="chk_cloud" />Cloud Drive</label>
+        </div>
+        <div class="row">
+            <div class="floatRight">
+                <input type="button" value="Load" id="btn_load" onclick="onclick_load()"/>
+                <input type="button" value="Save" id="btn_save" onclick="onclick_save()"/>
+            </div>
+            
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "calapp",
+  "version": "1.0.0",
+  "description": "Cal App desktop ",
+  "main": "CalcApp",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Wanchai Yeung",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/storage": "^1.5.1",
+    "azure-storage": "^2.7.0",
+    "electron": "^1.7.9"
+  }
+}
