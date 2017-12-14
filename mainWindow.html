@@ -27,8 +27,38 @@
         background:red;
         color:white;
     }
+    #modal{
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 1; /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgb(0,0,0); /* Fallback color */
+        background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    }
+    #text{
+        background-color: #fefefe;
+        margin: auto;
+        position: absolute;
+        top:0;
+        bottom:0;
+        left:0;
+        right:0;
+        border: 1px solid #888;
+        width: 300px;
+        height:100px;
+        text-align: center;
+    }
 </style>
 <script type="text/javascript">
+    // Set Unique ID
+    var uuid = '';
+    // REST API Url
+    var serverUrl = 'http://wanchai.azurewebsites.net/';
+
     // ----------------------------- Manage File ----------------------------- 
     var bucketName = 'wanchai';
     var fileName = 'data.json';
@@ -52,9 +82,12 @@
             var data = JSON.parse(respond);
             document.getElementById('txt_result').value = data.result;
             var elements = document.getElementsByClassName("btn_operation");
+
             for(var i = 0; i < elements.length; i ++){
                 if(elements[i].value == data.operation){
                     elements[i].classList.add("clicked_operation");
+                }else{
+                    elements[i].classList.remove("clicked_operation");
                 }
             }
             document.getElementById('txt_a').value = data.a;
@@ -65,79 +98,123 @@
     }
     // Clould
     function LoadFileFromCloud(){
-        const Storage = require('@google-cloud/storage');
+        // const Storage = require('@google-cloud/storage');
   
-        // Creates a client
-        const storage = new Storage();
+        // // Creates a client
+        // const storage = new Storage();
     
-        /**
-         * TODO(developer): Uncomment the following lines before running the sample.
-         */
-        // const bucketName = 'Name of a bucket, e.g. my-bucket';
-        // const srcFilename = 'Remote file to download, e.g. file.txt';
-        // const destFilename = 'Local destination for file, e.g. ./local/path/to/file.txt';
+        // /**
+        //  * TODO(developer): Uncomment the following lines before running the sample.
+        //  */
+        // // const bucketName = 'Name of a bucket, e.g. my-bucket';
+        // // const srcFilename = 'Remote file to download, e.g. file.txt';
+        // // const destFilename = 'Local destination for file, e.g. ./local/path/to/file.txt';
     
-        const options = {
-        // The path to which the file should be downloaded, e.g. "./file.txt"
-        destination: fileName,
-        };
+        // const options = {
+        // // The path to which the file should be downloaded, e.g. "./file.txt"
+        // destination: fileName,
+        // };
     
-        // Downloads the file
-        storage
-        .bucket(bucketName)
-        .file(fileName)
-        .download(options)
-        .then(() => {
-            LoadFile();
-        })
-        .catch(err => {
-            console.error('ERROR:', err);
-            alert("Cannot find file");
-        });
+        // // Downloads the file
+        // storage
+        // .bucket(bucketName)
+        // .file(fileName)
+        // .download(options)
+        // .then(() => {
+        //     LoadFile();
+        // })
+        // .catch(err => {
+        //     console.error('ERROR:', err);
+        //     alert("Cannot find file");
+        // });
+        if(uuid != ''){
+            document.getElementById('modal').style.display = "block";
+            var requestUrl = serverUrl + "getdata/" + uuid;
+            sendRequest(requestUrl, function(response){
+                document.getElementById('modal').style.display = "none";
+                if(response != null && response != ''){
+                    var data = JSON.parse(response);
+                    document.getElementById('txt_result').value = data.result;
+                    var elements = document.getElementsByClassName("btn_operation");
+                    for(var i = 0; i < elements.length; i ++){
+                        if(elements[i].value == data.operation){
+                            elements[i].classList.add("clicked_operation");
+                        }else{
+                            elements[i].classList.remove("clicked_operation");
+                        }
+                    }
+                    document.getElementById('txt_a').value = data.a;
+                    document.getElementById('txt_b').value = data.b;
+                }
+            });
+        }else{
+            alert('Cannot find file');
+        }
+        
     }
     function SaveFileToCloud(dataJson){
         var fs = require('fs');
+        
+        document.getElementById('modal').style.display = "block";
         fs.writeFile("data.json", JSON.stringify(dataJson), function(err) {
             if(err) {
                 return alert(err);
             }
-            // [START storage_upload_file]
-            // Imports the Google Cloud client library
-            const Storage = require('@google-cloud/storage');
-        
-            // Creates a client
-            const storage = new Storage();
-        
-            /**
-             * TODO(developer): Uncomment the following lines before running the sample.
-             */
-            // const bucketName = 'Name of a bucket, e.g. my-bucket';
-            // const filename = 'Local file to upload, e.g. ./local/path/to/file.txt';
-        
-            // Uploads a local file to the bucket
-            storage
-            .bucket(bucketName)
-            .upload(fileName)
-            .then(() => {
-                storage
-                .bucket(bucketName)
-                .file(fileName)
-                .makePublic()
-                .then(() => {
-                    alert("The file was saved!");
-                    console.log('gs://${bucketName}/${filename} is now public.');
-                })
-                .catch(err => {
-                    alert(error);
-                    console.error('ERROR:', err);
-                });
-                console.log('${filename} uploaded to ${bucketName}.');
-            })
-            .catch(err => {
-                alert(error);
-                console.error('ERROR:', err);
+            var requestUrl = '';
+            if(dataJson.operation == '/'){
+                dataJson.operation = 'slash';
+            }
+            if(dataJson.operation == '+'){
+                dataJson.operation = 'plus';
+            }
+            if(uuid == ''){
+                uuid = uuidv4();
+                requestUrl = serverUrl + "uploaddata/" + uuid + "/" + dataJson.a + "/" + dataJson.b + "/" + dataJson.operation + "/" + dataJson.result;
+            }else{
+                requestUrl = serverUrl + "uploaddata/" + uuid + "/" + dataJson.a + "/" + dataJson.b + "/" + dataJson.operation + "/" + dataJson.result;
+            }
+            sendRequest(requestUrl, function(response){
+                document.getElementById('modal').style.display = 'none';
+                alert('The file was saved!');
+
             });
-            // [END storage_upload_file]
+            // // [START storage_upload_file]
+            // // Imports the Google Cloud client library
+            // const Storage = require('@google-cloud/storage');
+        
+            // // Creates a client
+            // const storage = new Storage();
+        
+            // /**
+            //  * TODO(developer): Uncomment the following lines before running the sample.
+            //  */
+            // // const bucketName = 'Name of a bucket, e.g. my-bucket';
+            // // const filename = 'Local file to upload, e.g. ./local/path/to/file.txt';
+        
+            // // Uploads a local file to the bucket
+            // storage
+            // .bucket(bucketName)
+            // .upload(fileName)
+            // .then(() => {
+            //     storage
+            //     .bucket(bucketName)
+            //     .file(fileName)
+            //     .makePublic()
+            //     .then(() => {
+            //         alert("The file was saved!");
+            //         console.log('gs://${bucketName}/${filename} is now public.');
+            //     })
+            //     .catch(err => {
+            //         alert(error);
+            //         console.error('ERROR:', err);
+            //     });
+            //     console.log('${filename} uploaded to ${bucketName}.');
+            // })
+            // .catch(err => {
+            //     alert(error);
+            //     console.error('ERROR:', err);
+            // });
+            // // [END storage_upload_file]
         }); 
         
     }
@@ -223,6 +300,27 @@
         }
         return true;
     }
+    function sendRequest(url, callback){
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                // Typical action to be performed when the document is ready:
+                callback(xhttp.responseText);
+            }
+        };
+        xhttp.open("GET", url, true);
+        xhttp.send();
+    }
+    function uuidv4() {
+        // return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        //     var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        //     return v.toString(16);
+        // });
+        return 'xxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
 </script>
 <body onload="aa()">
     <div id="wrap">
@@ -247,6 +345,9 @@
             </div>
             
         </div>
+    </div>
+    <div id="modal">
+        <div id="text"><h1>Loading</h6></div>
     </div>
 </body>
 </html>
